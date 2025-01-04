@@ -12,12 +12,32 @@ DENO_INSTALL_URL="https://deno.land/install.sh"
 BUN_INSTALL_URL="https://bun.sh/install"
 
 # Trap for handling errors
-trap 'echo -e "${RED}[ERROR] Something went wrong. Exiting.${NC}" && exit 1' ERR
+trap 'echo -e "${RED}[ERROR] An error occurred. Exiting.${NC}" && exit 1' ERR
 
 # Helper functions for output
 success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 warning() { echo -e "${YELLOW}[INFO]${NC} $1"; }
 error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+
+# Function to update environment variables
+update_env_vars() {
+  warning "Adding required environment variables to ~/.bashrc..."
+  local BASHRC="$HOME/.bashrc"
+
+  # Ensure NVM exports
+  grep -qxF 'export NVM_DIR="$HOME/.nvm"' "$BASHRC" || {
+    echo 'export NVM_DIR="$HOME/.nvm"' >>"$BASHRC"
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >>"$BASHRC"
+    echo '[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"' >>"$BASHRC"
+  }
+
+  # Ensure Deno and Bun exports
+  grep -qxF 'export DENO_INSTALL="$HOME/.deno"' "$BASHRC" || echo 'export DENO_INSTALL="$HOME/.deno"' >>"$BASHRC"
+  grep -qxF 'export PATH="$DENO_INSTALL/bin:$HOME/.bun/bin:$PATH"' "$BASHRC" || echo 'export PATH="$DENO_INSTALL/bin:$HOME/.bun/bin:$PATH"' >>"$BASHRC"
+
+  warning "Reloading ~/.bashrc..."
+  source "$BASHRC"
+}
 
 # Install Node.js using NVM
 install_node() {
@@ -92,7 +112,7 @@ show_menu() {
   echo "3. Install Bun"
   echo "4. Install All"
   echo "5. Exit"
-  read -p "Enter your choice (1-5): " choice
+  read -rp "Enter your choice (1-5): " choice
 }
 
 # Main script execution
@@ -124,22 +144,12 @@ while true; do
   esac
 
   # Confirm and continue
-  read -p "Do you want to perform another action? (y/n): " continue_choice
+  read -rp "Do you want to perform another action? (y/n): " continue_choice
   if [[ "$continue_choice" != "y" ]]; then
     break
   fi
 done
 
-# Add exports to bashrc (if not already present)
-warning "Updating environment variables in ~/.bashrc..."
-{
-  echo 'export NVM_DIR="$HOME/.nvm"'
-  echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
-  echo '[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"'
-  echo 'export DENO_INSTALL="$HOME/.deno"'
-  echo 'export PATH="$DENO_INSTALL/bin:$HOME/.bun/bin:$PATH"'
-} >>~/.bashrc
-
-# Reload bashrc
-source ~/.bashrc
+# Update environment variables
+update_env_vars
 success "Setup completed! PATH and runtime tools are ready."
